@@ -12,8 +12,8 @@ from pathlib import Path
 
 from werkzeug.security import generate_password_hash
 
-# <repo root>/expense_tracker.db, independent of the current working directory.
-DB_PATH = Path(__file__).resolve().parent.parent / "expense_tracker.db"
+# <repo root>/spendly.db, independent of the current working directory.
+DB_PATH = Path(__file__).resolve().parent.parent / "spendly.db"
 
 CATEGORIES = [
     "Food",
