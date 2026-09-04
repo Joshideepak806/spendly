@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from datetime import date
 from functools import wraps
 
 from flask import Flask, redirect, render_template, request, session, url_for
@@ -52,6 +53,15 @@ def safe_next(target):
     if "\\" in target:
         return None
     return target
+
+
+def initials(name):
+    """Return up to two upper-case initials for an avatar, or "?" for a blank name."""
+    words = name.split()
+    if not words:
+        return "?"
+    letters = words[0][0] + (words[-1][0] if len(words) > 1 else "")
+    return letters.upper()
 
 
 def login_required(view):
@@ -170,7 +180,52 @@ def logout():
 @app.route("/profile")
 @login_required
 def profile():
-    return "Profile page — coming in Step 4"
+    user_id = session["user_id"]
+    today = date.today()
+    month_start = today.replace(day=1).isoformat()
+
+    conn = get_db()
+    try:
+        user = conn.execute(
+            "SELECT id, name, email, created_at FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        if not user:
+            # The account was deleted while its session cookie was still valid.
+            session.clear()
+            return redirect(url_for("login"))
+
+        totals = conn.execute(
+            "SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count "
+            "FROM expenses WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        month = conn.execute(
+            "SELECT COALESCE(SUM(amount), 0) AS total "
+            "FROM expenses WHERE user_id = ? AND date >= ?",
+            (user_id, month_start),
+        ).fetchone()
+        top = conn.execute(
+            "SELECT category, SUM(amount) AS total FROM expenses "
+            "WHERE user_id = ? GROUP BY category "
+            "ORDER BY total DESC, category ASC LIMIT 1",
+            (user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    member_since = date.fromisoformat(user["created_at"][:10]).strftime("%B %Y")
+
+    return render_template(
+        "profile.html",
+        user=user,
+        initials=initials(user["name"]),
+        member_since=member_since,
+        total_spent=float(totals["total"]),
+        month_spent=float(month["total"]),
+        expense_count=totals["count"],
+        top_category=top["category"] if top else None,
+        month_name=today.strftime("%B"),
+    )
 
 
 @app.route("/terms")
