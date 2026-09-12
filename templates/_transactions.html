@@ -1,0 +1,30 @@
+{# Partial: recent transaction history. Included from profile.html.
+   Expects a `transactions` list of dicts with date, description, category, amount. #}
+<section class="txn-section">
+    <h2>Recent transactions</h2>
+
+    {% if transactions %}
+    <table class="txn-table">
+        <thead>
+            <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Description</th>
+                <th scope="col">Category</th>
+                <th scope="col">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>{{ t.date }}</td>
+                <td>{{ t.description }}</td>
+                <td>{{ t.category }}</td>
+                <td>₹{{ "{:,.2f}".format(t.amount) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="txn-empty">No transactions yet. Add an expense to see it here.</p>
+    {% endif %}
+</section>

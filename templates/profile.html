@@ -38,12 +38,19 @@
         <div class="stat-tile">
             <span class="stat-label">Top category</span>
             <span class="stat-value">{{ top_category or "—" }}</span>
-            <span class="stat-hint">{{ "by amount" if top_category else "no expenses yet" }}</span>
+            {# Keyed off expense_count, not top_category: the query layer returns
+               the em dash "—" for a user with no expenses, which is truthy. #}
+            <span class="stat-hint">{{ "by amount" if expense_count else "no expenses yet" }}</span>
         </div>
     </div>
 
     {% if expense_count == 0 %}
     <p class="empty-state">You haven't logged any expenses yet. Add your first one to see your spending here.</p>
+    {% else %}
+    {# Both partials handle their own empty case, but with no expenses at all the
+       single message above reads better than three separate empty states. #}
+    {% include "_transactions.html" %}
+    {% include "_categories.html" %}
     {% endif %}
 
     <div class="profile-actions">
