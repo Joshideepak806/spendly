@@ -7,6 +7,12 @@ from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database.db import get_db, init_db, seed_db
+from database.queries import (
+    get_category_breakdown,
+    get_recent_transactions,
+    get_summary_stats,
+    get_user_by_id,
+)
 
 app = Flask(__name__)
 
@@ -181,50 +187,27 @@ def logout():
 @login_required
 def profile():
     user_id = session["user_id"]
-    today = date.today()
-    month_start = today.replace(day=1).isoformat()
 
-    conn = get_db()
-    try:
-        user = conn.execute(
-            "SELECT id, name, email, created_at FROM users WHERE id = ?", (user_id,)
-        ).fetchone()
-        if not user:
-            # The account was deleted while its session cookie was still valid.
-            session.clear()
-            return redirect(url_for("login"))
+    user = get_user_by_id(user_id)
+    if not user:
+        # The account was deleted while its session cookie was still valid.
+        session.clear()
+        return redirect(url_for("login"))
 
-        totals = conn.execute(
-            "SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count "
-            "FROM expenses WHERE user_id = ?",
-            (user_id,),
-        ).fetchone()
-        month = conn.execute(
-            "SELECT COALESCE(SUM(amount), 0) AS total "
-            "FROM expenses WHERE user_id = ? AND date >= ?",
-            (user_id, month_start),
-        ).fetchone()
-        top = conn.execute(
-            "SELECT category, SUM(amount) AS total FROM expenses "
-            "WHERE user_id = ? GROUP BY category "
-            "ORDER BY total DESC, category ASC LIMIT 1",
-            (user_id,),
-        ).fetchone()
-    finally:
-        conn.close()
-
-    member_since = date.fromisoformat(user["created_at"][:10]).strftime("%B %Y")
+    stats = get_summary_stats(user_id)
 
     return render_template(
         "profile.html",
         user=user,
         initials=initials(user["name"]),
-        member_since=member_since,
-        total_spent=float(totals["total"]),
-        month_spent=float(month["total"]),
-        expense_count=totals["count"],
-        top_category=top["category"] if top else None,
-        month_name=today.strftime("%B"),
+        member_since=user["member_since"],
+        total_spent=stats["total_spent"],
+        month_spent=stats["month_spent"],
+        expense_count=stats["transaction_count"],
+        top_category=stats["top_category"],
+        month_name=date.today().strftime("%B"),
+        transactions=get_recent_transactions(user_id),
+        categories=get_category_breakdown(user_id),
     )
 
 

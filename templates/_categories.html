@@ -1,0 +1,20 @@
+<section class="cat-section">
+    <h2>Spending by category</h2>
+
+    {% if categories %}
+    <ul class="cat-list">
+        {% for c in categories %}
+        <li class="cat-row">
+            <span class="cat-name">{{ c.name }}</span>
+            <span class="cat-amount">₹{{ "{:,.2f}".format(c.amount) }}</span>
+            <span class="cat-pct">{{ c.pct }}%</span>
+            <div class="cat-bar" role="img" aria-label="{{ c.name }}: {{ c.pct }}% of total spend">
+                <div class="cat-bar-fill" style="width: {{ c.pct }}%"></div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="cat-empty">No expenses yet — your category breakdown will show up here once you add some.</p>
+    {% endif %}
+</section>
